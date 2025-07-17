@@ -1,0 +1,68 @@
+version: '3.8'
+
+services:
+  vprodb:
+    build:
+      context: ./Docker-files/db
+    image: didymus2023/vprofiledb
+    container_name: vprodb
+    ports:
+      - "3306:3306"
+    volumes:
+      - vprodbdata:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: vprodbpass
+    networks:
+      - vprofile-network
+
+  vprocache01:
+    image: memcached
+    container_name: vprocache01
+    ports:
+      - "11211:11211"
+    networks:
+      - vprofile-network
+
+  vpromq01:
+    image: rabbitmq
+    container_name: vpromq01
+    ports:
+      - "5672:5672"
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    networks:
+      - vprofile-network
+
+  vproapp:
+    build:
+      context: ./Docker-files/app
+    image: didymus2023/vprofileapp
+    container_name: vproapp
+    ports:
+      - "8080:8080"
+    depends_on:
+      - vprodb
+      - vprocache01
+      - vpromq01
+    networks:
+      - vprofile-network
+
+  vproweb:
+    build:
+      context: ./Docker-files/web
+    image: didymus2023/vprofileweb
+    container_name: vproweb
+    ports:
+      - "80:80"
+    depends_on:
+      - vproapp
+    networks:
+      - vprofile-network
+
+volumes:
+  vprodbdata: {}
+
+networks:
+  vprofile-network:
+    driver: bridge
